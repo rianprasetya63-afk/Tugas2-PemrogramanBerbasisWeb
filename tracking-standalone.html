@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tracking Delivery Order - SITTA</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .page-header .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 10px 25px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        .content-area {
+            padding: 40px 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .filter-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+        }
+
+        .filter-title {
+            font-size: 1.4rem;
+            color: #667eea;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .error-message {
+            color: #dc3545;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .status-aman {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-menipis {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-kosong {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <div class="container">
+            <h1 class="page-title">📦 Tracking Delivery Order</h1>
+            <a href="index.html" class="back-btn">← Kembali</a>
+        </div>
+    </div>
+
+    <div id="app" class="content-area">
+        <!-- Form Tambah DO Baru -->
+        <div class="filter-section">
+            <h2 class="filter-title">➕ Tambah Delivery Order Baru</h2>
+            
+            <form @submit.prevent="submitDO">
+                <div class="filter-grid">
+                    <div class="form-group">
+                        <label>Nomor DO</label>
+                        <input type="text" v-model="form.nomorDO" disabled style="background: #f5f5f5;">
+                    </div>
+
+                    <div class="form-group">
+                        <label>NIM *</label>
+                        <input type="text" v-model="form.nim" required maxlength="9" placeholder="123456789">
+                        <span class="error-message" v-if="errors.nim">{{ errors.nim }}</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Nama Mahasiswa *</label>
+                        <input type="text" v-model="form.nama" required placeholder="Nama Lengkap">
+                        <span class="error-message" v-if="errors.nama">{{ errors.nama }}</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Ekspedisi *</label>
+                        <select v-model="form.ekspedisi" required>
+                            <option value="">Pilih Ekspedisi</option>
+                            <option v-for="peng in pengirimanList" :key="peng.kode" :value="peng.kode">
+                                {{ peng.nama }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Paket Bahan Ajar *</label>
+                        <select v-model="form.paketKode" required>
+                            <option value="">Pilih Paket</option>
+                            <option v-for="p in paket" :key="p.kode" :value="p.kode">
+                                {{ p.kode }} - {{ p.nama }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tanggal Kirim *</label>
+                        <input type="date" v-model="form.tanggalKirim" required>
+                    </div>
+                </div>
+
+                <!-- Detail Paket -->
+                <div v-if="selectedPaket" style="background: #f8f9ff; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">📋 Detail Paket</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div>
+                            <strong>Kode Paket:</strong> {{ selectedPaket.kode }}
+                        </div>
+                        <div>
+                            <strong>Nama Paket:</strong> {{ selectedPaket.nama }}
+                        </div>
+                        <div>
+                            <strong>Isi Paket:</strong> {{ selectedPaket.isi.join(', ') }}
+                        </div>
+                        <div>
+                            <strong>Total Harga:</strong> Rp {{ formatRupiah(selectedPaket.harga) }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary">💾 Tambah Delivery Order</button>
+                    <button type="button" class="btn btn-secondary" @click="resetForm">🔄 Reset Form</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Daftar Tracking DO -->
+        <div class="filter-section" style="margin-top: 40px;">
+            <h2 class="filter-title">📋 Daftar Delivery Order ({{ Object.keys(tracking).length }} pesanan)</h2>
+            
+            <div style="display: grid; gap: 25px;">
+                <div v-for="(deliveryOrder, key) in tracking" :key="key" 
+                     style="background: white; border: 2px solid #e0e0e0; border-radius: 15px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
+                    
+                    <!-- Header DO -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
+                        <div>
+                            <h3 style="color: #667eea; font-size: 1.5rem; margin-bottom: 5px;">{{ key }}</h3>
+                            <p style="color: #666; margin: 0;">{{ do.nama }} ({{ do.nim }})</p>
+                        </div>
+                        <div>
+                            <span class="status-badge" :class="getStatusDOClass(do.status)" style="font-size: 1.1rem;">
+                                {{ getStatusDOIcon(do.status) }} {{ do.status }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Info DO -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px; padding: 20px; background: #f8f9ff; border-radius: 10px;">
+                        <div>
+                            <div style="color: #666; font-size: 0.9rem; margin-bottom: 5px;">Ekspedisi</div>
+                            <div style="font-weight: 600; color: #333;">{{ do.ekspedisi }}</div>
+                        </div>
+                        <div>
+                            <div style="color: #666; font-size: 0.9rem; margin-bottom: 5px;">Tanggal Kirim</div>
+                            <div style="font-weight: 600; color: #333;">{{ formatTanggal(do.tanggalKirim) }}</div>
+                        </div>
+                        <div>
+                            <div style="color: #666; font-size: 0.9rem; margin-bottom: 5px;">Paket</div>
+                            <div style="font-weight: 600; color: #333;">{{ do.paket }}</div>
+                        </div>
+                        <div>
+                            <div style="color: #666; font-size: 0.9rem; margin-bottom: 5px;">Total Harga</div>
+                            <div style="font-weight: 600; color: #667eea; font-size: 1.1rem;">Rp {{ formatRupiah(do.total) }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Timeline Perjalanan -->
+                    <div>
+                        <h4 style="color: #667eea; margin-bottom: 20px; font-size: 1.1rem;">🚚 Riwayat Perjalanan</h4>
+                        <div style="position: relative; padding-left: 40px;">
+                            <div v-for="(step, index) in do.perjalanan" :key="index"
+                                 style="position: relative; margin-bottom: 25px; padding-bottom: 25px;"
+                                 :style="index < do.perjalanan.length - 1 ? 'border-left: 3px solid #e0e0e0;' : ''">
+                                
+                                <div style="position: absolute; left: -48px; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #667eea; background: white;"></div>
+                                
+                                <div style="background: #f8f9ff; padding: 15px; border-radius: 10px;">
+                                    <div style="font-size: 0.85rem; color: #666; margin-bottom: 5px;">
+                                        ⏰ {{ formatDateTime(step.waktu) }}
+                                    </div>
+                                    <div style="font-weight: 600; color: #333;">
+                                        {{ step.keterangan }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="Object.keys(tracking).length === 0" style="text-align: center; padding: 60px 20px; color: #999;">
+                    <div style="font-size: 3rem; margin-bottom: 15px;">📦</div>
+                    <div style="font-size: 1.2rem;">Belum ada delivery order yang ditambahkan</div>
+                    <div style="margin-top: 10px; font-size: 0.9rem;">Silakan tambahkan DO baru menggunakan form di atas</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Vue.js dari CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    
+    <script>
+        // Cek apakah Vue ter-load
+        console.log('Vue loaded:', typeof Vue !== 'undefined');
+        
+        var app = new Vue({
+            el: '#app',
+            data: {
+                pengirimanList: [
+                    { kode: "REG", nama: "JNE Reguler (3-5 hari)" },
+                    { kode: "EXP", nama: "JNE Express (1-2 hari)" }
+                ],
+                paket: [
+                    { kode: "PAKET-UT-001", nama: "PAKET IPS Dasar", isi: ["EKMA4116", "EKMA4115"], harga: 120000 },
+                    { kode: "PAKET-UT-002", nama: "PAKET IPA Dasar", isi: ["BIOL4201", "FISIP4001"], harga: 140000 }
+                ],
+                tracking: {
+                    "DO2025-0001": {
+                        nim: "123456789",
+                        nama: "Rina Wulandari",
+                        status: "Dalam Perjalanan",
+                        ekspedisi: "JNE",
+                        tanggalKirim: "2025-08-25",
+                        paket: "PAKET-UT-001",
+                        total: 120000,
+                        perjalanan: [
+                            { waktu: "2025-08-25 10:12:20", keterangan: "Penerimaan di Loket: TANGSEL" },
+                            { waktu: "2025-08-25 14:07:56", keterangan: "Tiba di Hub: JAKSEL" },
+                            { waktu: "2025-08-26 08:44:01", keterangan: "Diteruskan ke Kantor Tujuan" }
+                        ]
+                    }
+                },
+                form: {
+                    nomorDO: "",
+                    nim: "",
+                    nama: "",
+                    ekspedisi: "",
+                    paketKode: "",
+                    tanggalKirim: ""
+                },
+                errors: {}
+            },
+            computed: {
+                generatedNomorDO() {
+                    const tahun = new Date().getFullYear();
+                    const existingDOs = Object.keys(this.tracking);
+                    
+                    if (existingDOs.length === 0) {
+                        return `DO${tahun}-0001`;
+                    }
+                    
+                    const lastDO = existingDOs[existingDOs.length - 1];
+                    const lastNumber = parseInt(lastDO.split('-')[1]);
+                    const newNumber = (lastNumber + 1).toString().padStart(4, '0');
+                    
+                    return `DO${tahun}-${newNumber}`;
+                },
+                
+                selectedPaket() {
+                    if (!this.form.paketKode) return null;
+                    return this.paket.find(p => p.kode === this.form.paketKode);
+                }
+            },
+            watch: {
+                tracking: {
+                    handler() {
+                        this.form.nomorDO = this.generatedNomorDO;
+                    },
+                    deep: true
+                },
+                
+                'form.paketKode'(newVal) {
+                    if (newVal) {
+                        const paket = this.paket.find(p => p.kode === newVal);
+                        if (paket) {
+                            console.log(`Paket dipilih: ${paket.nama}, Total: Rp ${paket.harga}`);
+                        }
+                    }
+                }
+            },
+            mounted() {
+                console.log('Vue app mounted successfully!');
+                this.form.nomorDO = this.generatedNomorDO;
+                this.form.tanggalKirim = this.getTodayDate();
+            },
+            methods: {
+                getTodayDate() {
+                    const today = new Date();
+                    const year = today.getFullYear();
+                    const month = String(today.getMonth() + 1).padStart(2, '0');
+                    const day = String(today.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                },
+                
+                formatRupiah(angka) {
+                    return angka.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                },
+                
+                formatTanggal(tanggal) {
+                    const date = new Date(tanggal);
+                    const options = { day: 'numeric', month: 'long', year: 'numeric' };
+                    return date.toLocaleDateString('id-ID', options);
+                },
+                
+                formatDateTime(datetime) {
+                    const date = new Date(datetime);
+                    const dateOptions = { day: 'numeric', month: 'short', year: 'numeric' };
+                    const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+                    
+                    const dateStr = date.toLocaleDateString('id-ID', dateOptions);
+                    const timeStr = date.toLocaleTimeString('id-ID', timeOptions);
+                    
+                    return `${dateStr}, ${timeStr}`;
+                },
+                
+                getStatusDOClass(status) {
+                    if (status === "Terkirim" || status === "Selesai") return "status-aman";
+                    if (status === "Dalam Perjalanan") return "status-menipis";
+                    return "status-kosong";
+                },
+                
+                getStatusDOIcon(status) {
+                    if (status === "Terkirim" || status === "Selesai") return "✅";
+                    if (status === "Dalam Perjalanan") return "🚚";
+                    return "📦";
+                },
+                
+                validateForm() {
+                    this.errors = {};
+                    let isValid = true;
+                    
+                    if (!/^\d{9}$/.test(this.form.nim)) {
+                        this.errors.nim = "NIM harus 9 digit angka!";
+                        isValid = false;
+                    }
+                    
+                    if (this.form.nama.length < 3) {
+                        this.errors.nama = "Nama minimal 3 karakter!";
+                        isValid = false;
+                    }
+                    
+                    return isValid;
+                },
+                
+                submitDO() {
+                    if (!this.validateForm()) {
+                        alert("Mohon perbaiki kesalahan pada form!");
+                        return;
+                    }
+                    
+                    if (!this.selectedPaket) {
+                        alert("Pilih paket terlebih dahulu!");
+                        return;
+                    }
+                    
+                    const nomorDO = this.form.nomorDO;
+                    const ekspedisiNama = this.pengirimanList.find(p => p.kode === this.form.ekspedisi).nama.split(' ')[0];
+                    
+                    const newDO = {
+                        nim: this.form.nim,
+                        nama: this.form.nama,
+                        status: "Pesanan Dibuat",
+                        ekspedisi: ekspedisiNama,
+                        tanggalKirim: this.form.tanggalKirim,
+                        paket: this.selectedPaket.kode,
+                        total: this.selectedPaket.harga,
+                        perjalanan: [
+                            {
+                                waktu: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                                keterangan: `Pesanan berhasil dibuat untuk paket ${this.selectedPaket.nama}`
+                            }
+                        ]
+                    };
+                    
+                    this.$set(this.tracking, nomorDO, newDO);
+                    
+                    alert(`Delivery Order ${nomorDO} berhasil ditambahkan!`);
+                    this.resetForm();
+                },
+                
+                resetForm() {
+                    this.form = {
+                        nomorDO: this.generatedNomorDO,
+                        nim: "",
+                        nama: "",
+                        ekspedisi: "",
+                        paketKode: "",
+                        tanggalKirim: this.getTodayDate()
+                    };
+                    this.errors = {};
+                }
+            }
+        });
+    </script>
+</body>
+</html>
